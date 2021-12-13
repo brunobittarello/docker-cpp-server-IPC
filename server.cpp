@@ -10,7 +10,6 @@
 #include <string>
 
 #include <cstdio>
-#include <iostream>
 #include <memory>
 #include <stdexcept>
 //#include <string>
@@ -19,6 +18,9 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+
+#include <ctime>
+#include <iomanip>      // std::setw
 
 using namespace std;
 
@@ -34,6 +36,29 @@ char response2[] = "</h1></body></html>\r\n";
 string result;
 char serverfifo[] = "/serverfifo";
 char clientfifo[] = "/clientfifo";
+
+string time_log()
+    {
+        time_t rawtime;
+        struct tm * timeContext;
+
+        string temp;
+        stringstream textStream;
+
+        time(&rawtime);
+
+        timeContext = localtime(&rawtime);
+
+        textStream << put_time(timeContext, "%a %d %b %Y - %I:%M:%S " << rawtime;
+        temp = textStream.str();
+
+        return temp;
+    }
+
+string log_prefix()
+{
+	return time_log() + " - Server ";
+}
 
 int init_second_proc2()
 {
@@ -79,102 +104,90 @@ void init_second_proc()
 
 int main()
 {
-	cout << "\n server started" << std::endl;
-	
-  char aString[4096];
-  int one = 1, client_fd = 0;
-  struct sockaddr_in svr_addr, cli_addr;
-  socklen_t sin_len = sizeof(cli_addr);
-  aString[0]='\0';
-  strcpy(aString, "Docker tested - ");
+	cout << log_prefix() << "started" << std::endl;
 
-  int sock = socket(AF_INET, SOCK_STREAM, 0);
-  if (sock < 0)
-    err(1, "can't open socket");
+	char aString[4096];
+	int one = 1, client_fd = 0;
+	struct sockaddr_in svr_addr, cli_addr;
+	socklen_t sin_len = sizeof(cli_addr);
+	aString[0]='\0';
+	strcpy(aString, "Docker tested - ");
 
-  setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(int));
+	int sock = socket(AF_INET, SOCK_STREAM, 0);
+	if (sock < 0)
+		err(1, "can't open socket");
 
-  int port = 8080;
-  svr_addr.sin_family = AF_INET;
-  svr_addr.sin_addr.s_addr = INADDR_ANY;
-  svr_addr.sin_port = htons(port);
+	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(int));
 
-  if (bind(sock, (struct sockaddr *) &svr_addr, sizeof(svr_addr)) == -1) {
-    close(sock);
-    err(1, "Can't bind");
-  }
+	int port = 8080;
+	svr_addr.sin_family = AF_INET;
+	svr_addr.sin_addr.s_addr = INADDR_ANY;
+	svr_addr.sin_port = htons(port);
 
-  listen(sock, 5);
-  int count = 0;
-  char str1[80];
-  int fd1;
-  
-  mkfifo(serverfifo, 0777);
-  while (1) {
-	  
-	// First open in read only and read
-	/*
-	
-		*/
+	if (bind(sock, (struct sockaddr *) &svr_addr, sizeof(svr_addr)) == -1) {
+		close(sock);
+		err(1, "Can't bind");
+	}
+
+	listen(sock, 5);
+	int count = 0;
+	char str1[80];
+	int fd1;
+
+	mkfifo(serverfifo, 0777);
+	while (1) {
+		client_fd = accept(sock, (struct sockaddr *) &cli_addr, &sin_len);
+		cout << log_prefix() << "got connection" << std::endl;
+
+		fd1 = open(serverfifo,O_WRONLY);
+		cout << log_prefix() << "opened(write) server fifo " << fd1 << std::endl;
+		if (fd1 == -1) return 3;
+
+		char message[] = "Hello?";
+		write(fd1, message, sizeof(message) + 1);
+		cout << log_prefix() << "wrote" << std::endl;
+		close(fd1);
+		cout << log_prefix() << "closed server fifo " << fd1 << std::endl;
+
+		fd1 = open(clientfifo,O_RDONLY);
+		cout << log_prefix() << "opened(read) client fifo " << fd1 << std::endl;
+		if (fd1 == -1) return 4;
 		
-	  
-    client_fd = accept(sock, (struct sockaddr *) &cli_addr, &sin_len);
-	cout << "\n server got connection" << std::endl;
-	
-	
-	
-	fd1 = open(serverfifo,O_WRONLY);
-	cout << "\n server opened write server fifo " << fd1 << std::endl;
-	if (fd1 == -1) return 3;
-	
-	char message[] = "Hello?";
-	write(fd1, message, sizeof(message) + 1);
-	cout << "\n server wrote" << std::endl;
-	close(fd1);
-	cout << "\n server closed server fifo " << fd1 << std::endl;
-	
-	fd1 = open(clientfifo,O_RDONLY);
-	cout << "\n server opened read client fifo " << fd1 << std::endl;
-	if (fd1 == -1) return 4;
-	read(fd1, str1, 80);
-	cout << "\n server read: " << str1 << std::endl;
-	close(fd1);
-	cout << "\n server closed client fifo" << std::endl;
-	
-	
+		read(fd1, str1, 80);
+		cout << log_prefix() << "server read: " << str1 << std::endl;
+		close(fd1);
+		cout << log_prefix() << "server closed client fifo" << std::endl;
 
-    if (client_fd == -1) {
-      perror("Can't accept");
-	  cout << "\nCan't accep" << std::endl;
-      continue;
-    }
+		if (client_fd == -1) {
+			perror("Can't accept");
+			cout << log_prefix() << "Can't accep" << std::endl;
+			continue;
+		}
 
-    write(client_fd, response, sizeof(response) - 1); /*-1:'\0'*/
-    write(client_fd, aString, strlen(aString));
-	char* s = &(std::to_string(count++))[0];
-	write(client_fd, s, sizeof(s) - 1); /*-1:'\0'*/	
-	char char_array[result.length() + 1];
-	strcpy(char_array, result.c_str());
-	write(client_fd, char_array, sizeof(char_array) - 1); /*-1:'\0'*/	
-	
-	
-	write(client_fd, str1, sizeof(str1) - 1); /*-1:'\0'*/	
-	
-	
-	/* Here some possible enhancements to read query, update it before resending to client */
-	/*
-    int bytes_read = read(client_fd, aString, 4096);
-    aString[bytes_read] = '\0';
-    if(bytes_read > 0)
-      write(client_fd, aString, strlen(aString));
-    else
-      write(client_fd, response, sizeof(response) - 1);
-    */
-	
-	
-	write(client_fd, response2, sizeof(response2) - 1); /*-1:'\0'*/
-    
-    
-    close(client_fd);
-  }
+		write(client_fd, response, sizeof(response) - 1); /*-1:'\0'*/
+		write(client_fd, aString, strlen(aString));
+		char* s = &(std::to_string(count++))[0];
+		write(client_fd, s, sizeof(s) - 1); /*-1:'\0'*/	
+		char char_array[result.length() + 1];
+		strcpy(char_array, result.c_str());
+		write(client_fd, char_array, sizeof(char_array) - 1); /*-1:'\0'*/
+
+
+		write(client_fd, str1, sizeof(str1) - 1); /*-1:'\0'*/
+
+
+		/* Here some possible enhancements to read query, update it before resending to client */
+		/*
+		int bytes_read = read(client_fd, aString, 4096);
+		aString[bytes_read] = '\0';
+		if(bytes_read > 0)
+		  write(client_fd, aString, strlen(aString));
+		else
+		  write(client_fd, response, sizeof(response) - 1);
+		*/
+
+		write(client_fd, response2, sizeof(response2) - 1); /*-1:'\0'*/   
+
+		close(client_fd);
+	}
 }
