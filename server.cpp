@@ -49,7 +49,7 @@ string time_log()
 
         timeContext = localtime(&rawtime);
 
-        textStream << put_time(timeContext, "%a %d %b %Y - %I:%M:%S " << rawtime;
+        textStream << put_time(timeContext, "%a %d %b %Y - %I:%M:%S ") << rawtime;
         temp = textStream.str();
 
         return temp;
@@ -58,48 +58,6 @@ string time_log()
 string log_prefix()
 {
 	return time_log() + " - Server ";
-}
-
-int init_second_proc2()
-{
-        FILE *handle = popen("./myotherapp", "r");
-
-        if (handle == NULL) {
-                return 1;
-        }
-
-        char buf[4096];
-        size_t readn;
-        while ((readn = fread(buf, 1, sizeof(buf), handle)) > 0) {
-			result.append(buf);
-			cout << "\n" << "Buffer: " << buf;
-            //fwrite(buf, 1, readn, stdout);
-        }
-
-        pclose(handle);
-
-        return 0;
-}
-
-void init_second_proc()
-{
-	array<char, 4096> buffer;    
-    unique_ptr<FILE, decltype(&pclose)> pipe(popen("./myotherapp", "r"), pclose);
-    if (!pipe) {
-        throw runtime_error("popen() failed!");
-    }
-
-    result = "asd";
-    cout << result << std::endl;
-	/*
-    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-        result.append(buffer.data());
-        cout << "\n" << "Result: " << result << std::endl;
-        cout << "\n" << "Buffer: " << buffer.data() << std::endl;
-    }
-    */
-    //printf("\Result:  %s\n", result);
-    cout << "\n\n" << "Result Final: " << result;
 }
 
 int main()

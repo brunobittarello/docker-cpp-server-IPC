@@ -31,7 +31,7 @@ string time_log()
 
 	timeContext = localtime(&rawtime);
 
-	textStream << put_time(timeContext, "%a %d %b %Y - %I:%M:%S " << rawtime;
+	textStream << put_time(timeContext, "%a %d %b %Y - %I:%M:%S ") << rawtime;
 	temp = textStream.str();
 
 	return temp;
